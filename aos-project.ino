@@ -19,7 +19,7 @@ AudioFileSourceSD *file;
 AudioOutputI2S *out;
 AudioFileSourceID3 *id3;
 // 音周りの設定.
-std::array<char*, 7> music_list = {"/uzuho.mp3", "/fran.mp3", "/hina.mp3", "/koishi.mp3", "/okina.mp3", "/remilia.mp3", "/sakuya.mp3"};
+std::array<char*, 7> music_list = {"/okina.mp3", "/uzuho.mp3", "/koishi.mp3", "/sakuya.mp3", "/fran.mp3", "/hina.mp3", "/remilia.mp3"};
 // 音リスト.
 
 TaskHandle_t th;
@@ -158,7 +158,7 @@ void dance_robot() {
   M5.Lcd.println("dance start");
   start_move();
 
-  vTaskDelay(10000 / portTICK_RATE_MS);
+  vTaskDelay(20000 / portTICK_RATE_MS);
 
   stop_move();
 }
@@ -166,12 +166,12 @@ void dance_robot() {
 void wifi_start() {
   // WiFi起動.
   WiFi.mode(WIFI_STA);
+  WiFi.disconnect(true);
   WiFi.begin(ssid, password);
 
-  M5.Lcd.print("connecting");
   while (WiFi.status() != WL_CONNECTED) {
-    M5.Lcd.print(".");
     delay(500);
+    M5.Lcd.print(".");
   }
   // WiFi起動.
 
@@ -184,9 +184,7 @@ void wifi_start() {
 
 void setup(){
   M5.begin();
-
-  M5.Lcd.println("Hello World");
-  Serial.println("Hello World");
+  delay(100);
 
   wifi_start();
   init_robot_pins();
