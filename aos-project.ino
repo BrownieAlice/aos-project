@@ -1,10 +1,18 @@
-#include <WiFi.h>
 #include <array>
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
 #include <M5Stack.h>
 #include "AudioFileSourceSD.h"
 #include "AudioFileSourceID3.h"
 #include "AudioGeneratorMP3.h"
 #include "AudioOutputI2S.h"
+
+const char *ssid = "pomunoaipon";
+const char *password = "ieso1og67uvop";
+WebServer server(80);
+/// WiFi設定.
 
 AudioGeneratorMP3 *mp3;
 AudioFileSourceSD *file;
@@ -29,7 +37,6 @@ constexpr int pwm_channel = 3;
 // PWMピンの最初のチャンネル番号.
 constexpr int pwm_clock = 500;
 // PWMのクロック.
-
 
 void music_func(void *pvParameters) {
   // 音楽用の関数.
@@ -78,6 +85,9 @@ void init_robot_pins() {
 void start_move() {
   // ロボットを動かす.
 
+  server.send(200, "text/plain", "kirimasyaro");
+  // リスポンス.
+
   for (const auto i : plus_pins) {
     digitalWrite(i, HIGH);
   }
@@ -93,8 +103,14 @@ void start_move() {
 
   static size_t music_num = 0;
   // プレイリスト番号.
+
+  MDNS.end();
+  // MDNS停止.
+
+  WiFi.disconnect();
   WiFi.mode(WIFI_OFF);
   // WiFiはOFFにしないと鳴らない.
+
   M5.Lcd.println(music_list[music_num]);
   delete id3;
   delete file;
@@ -131,8 +147,39 @@ void stop_move() {
 
   xSemaphoreTake(xSemaphore, portMAX_DELAY);
   mp3->stop();
-  WiFi.mode(WIFI_STA);
   // 再生停止.
+
+  wifi_start();
+  // WiFiスタート.
+}
+
+void dance_robot() {
+  // ダンスさせる.
+  M5.Lcd.println("dance start");
+  start_move();
+
+  vTaskDelay(10000 / portTICK_RATE_MS);
+
+  stop_move();
+}
+
+void wifi_start() {
+  // WiFi起動.
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  M5.Lcd.print("connecting");
+  while (WiFi.status() != WL_CONNECTED) {
+    M5.Lcd.print(".");
+    delay(500);
+  }
+  // WiFi起動.
+
+  MDNS.begin("kirimasyaro");
+  MDNS.addService("http", "tcp", 80);
+  // MDNS開始.
+
+  M5.Lcd.println("\nsuccess to start WiFi");
 }
 
 void setup(){
@@ -141,7 +188,12 @@ void setup(){
   M5.Lcd.println("Hello World");
   Serial.println("Hello World");
 
+  wifi_start();
   init_robot_pins();
+
+  server.on("/", dance_robot);
+  server.begin();
+  // サーバー動作開始.
 
   xSemaphore = xSemaphoreCreateMutex();
   xTaskCreatePinnedToCore(music_func, "music_func", 4096, NULL, 1, &th, 0);
@@ -151,15 +203,5 @@ void setup(){
 // the loop routine runs over and over again forever
 void loop() {
   M5.update();
-
-  if (M5.BtnA.wasReleased()) {
-      M5.Lcd.println("pressed!");
-      vTaskDelay(5000 / portTICK_RATE_MS);
-
-      start_move();
-
-      vTaskDelay(10000 / portTICK_RATE_MS);
-
-      stop_move();
-  }
+  server.handleClient();
 }
