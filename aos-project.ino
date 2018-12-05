@@ -1,34 +1,92 @@
 #include <M5Stack.h>
+#include <array>
 
-// the setup routine runs once when M5Stack starts up
+constexpr std::array<int, 3> plus_pins = {3, 21, 2};
+// モタドラ正方向の入力(回転方向を決めるやつ).
+constexpr std::array<int, 3> gnd_pins = {17, 22, 5};
+// モタドラGND方向の入力(回転方向を決めるやつ).
+constexpr std::array<int, 3> pwm_pins = {16, 23, 18};
+// モタドラのPWM入力.
+constexpr int lamp_pin = 26;
+// パトランプのピン.
+constexpr int first_pwm_channel = 3;
+// PWMピンの最初のチャンネル番号.
+constexpr int pwm_clock = 500;
+// PWMのクロック.
+
+void init_robot_pins() {
+  // ロボット操作周りのピンの初期化.
+  for (const auto i : plus_pins) {
+    pinMode(i, OUTPUT);
+    digitalWrite(i, LOW);
+  }
+  // plusピン初期化.
+
+  for (const auto i : gnd_pins) {
+    pinMode(i, OUTPUT);
+    digitalWrite(i, LOW);
+  }
+  // GNDピン初期化.
+
+  auto channel = first_pwm_channel;
+  for (const auto i : pwm_pins) {
+    pinMode(i, OUTPUT);
+    ledcSetup(channel, pwm_clock, 10);
+    ledcAttachPin(i, channel);
+    ledcWrite(channel, 0);
+    channel++;
+  }
+  // PWMピン初期化.
+
+  pinMode(lamp_pin, OUTPUT);
+  digitalWrite(lamp_pin, LOW);
+}
+
+void start_move() {
+  // ロボットを動かす.
+
+  for (const auto i : plus_pins) {
+    digitalWrite(i, HIGH);
+  }
+  // plusピン設定.
+
+  auto channel = first_pwm_channel;
+  for (const auto i : pwm_pins) {
+    ledcWrite(channel, 300);
+    channel++;
+  }
+  // PWMピン設定.
+
+  digitalWrite(lamp_pin, HIGH);
+  // ランプピン設定.
+}
+
+void stop_move() {
+  // ロボットを止める.
+
+  for (const auto i : plus_pins) {
+    digitalWrite(i, LOW);
+  }
+  // plusピン設定.
+
+  auto channel = first_pwm_channel;
+  for (const auto i : pwm_pins) {
+    ledcWrite(channel, 0);
+    channel++;
+  }
+  // PWMピン設定.
+
+  digitalWrite(lamp_pin, LOW);
+  // ランプピン設定.
+}
+
 void setup(){
-
-  // Initialize the M5Stack object
   M5.begin(true, false, true);
 
-  // LCD display
   M5.Lcd.println("Hello World");
   Serial.println("Hello World");
-  pinMode(3, OUTPUT);
-  pinMode(17, OUTPUT);
-  pinMode(16, OUTPUT);
-  pinMode(21, OUTPUT);
-  pinMode(22, OUTPUT);
-  pinMode(23, OUTPUT);
-  pinMode(2, OUTPUT);
-  pinMode(5, OUTPUT);
-  pinMode(25, OUTPUT);
-  pinMode(26, OUTPUT);
-  digitalWrite(3, LOW);
-  digitalWrite(17, LOW);
-  digitalWrite(16, LOW);
-  digitalWrite(21, LOW);
-  digitalWrite(22, LOW);
-  digitalWrite(23, LOW);
-  digitalWrite(2, LOW);
-  digitalWrite(5, LOW);
-  digitalWrite(25, LOW);
-  digitalWrite(26, LOW);
+
+  init_robot_pins();
 }
 
 // the loop routine runs over and over again forever
@@ -39,27 +97,9 @@ void loop() {
       M5.Lcd.println("pressed!");
       vTaskDelay(5000 / portTICK_RATE_MS);
 
-      digitalWrite(3, HIGH);
-      digitalWrite(17, LOW);
-      digitalWrite(21, HIGH);
-      digitalWrite(22, LOW);
-      digitalWrite(2, HIGH);
-      digitalWrite(5, LOW);
-      digitalWrite(26, HIGH);
+      start_move();
+      vTaskDelay(3000 / portTICK_RATE_MS);
 
-      ledcSetup(3, 490, 8);
-      ledcAttachPin(16, 3);
-      ledcAttachPin(23, 3);
-      ledcAttachPin(25, 3);
-      ledcWrite(3, 100);
-      vTaskDelay(5000 / portTICK_RATE_MS);
-
-      digitalWrite(3, LOW);
-      digitalWrite(17, LOW);
-      digitalWrite(21, LOW);
-      digitalWrite(22, LOW);
-      digitalWrite(2, LOW);
-      digitalWrite(5, LOW);
-      digitalWrite(26, LOW);
+      stop_move();
   }
 }
